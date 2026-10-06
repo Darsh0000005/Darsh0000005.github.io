@@ -1,0 +1,340 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PDF Crop Tool v1</title>
+<style>
+  :root {
+    --bg: #f4f5f7; --panel: #fff; --text: #1d2330; --muted: #667085;
+    --line: #d9dde5; --accent: #2563eb; --accent-text: #fff;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#12151c; --panel:#1b1f29; --text:#e8ebf1; --muted:#9aa3b5; --line:#2e3442; --accent:#4f8cff; --accent-text:#0b1020; }
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font:15px/1.4 system-ui,-apple-system,Segoe UI,Roboto,sans-serif; }
+  header { padding:14px 16px; border-bottom:1px solid var(--line); background:var(--panel); display:flex; align-items:baseline; gap:10px; flex-wrap:wrap; }
+  h1 { margin:0; font-size:18px; }
+  header span { color:var(--muted); font-size:13px; }
+  main { display:flex; gap:16px; padding:16px; align-items:flex-start; }
+  aside { width:280px; flex:none; background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:14px; position:sticky; top:12px; }
+  aside h2 { font-size:12px; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); margin:16px 0 8px; }
+  aside h2:first-child { margin-top:0; }
+  .stage { flex:1; min-width:0; }
+  button, select, input { font:inherit; color:inherit; }
+  button { background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:7px 12px; cursor:pointer; }
+  button:hover:not(:disabled) { border-color:var(--accent); }
+  button:disabled { opacity:.45; cursor:not-allowed; }
+  button.primary { background:var(--accent); color:var(--accent-text); border-color:var(--accent); font-weight:600; width:100%; padding:10px; }
+  .row { display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:8px; }
+  .grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  label.f { display:flex; flex-direction:column; font-size:12px; color:var(--muted); gap:3px; }
+  input[type=number], select { background:var(--bg); border:1px solid var(--line); border-radius:6px; padding:6px 8px; width:100%; }
+  .radio { display:flex; gap:6px; align-items:center; margin:4px 0; font-size:14px; }
+  .toolbar { display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:10px; }
+  .toolbar .sp { flex:1; }
+  .pageinfo { color:var(--muted); font-size:13px; min-width:90px; text-align:center; }
+  .viewer { background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:16px; overflow:auto; max-height:calc(100vh - 150px); }
+  .pagewrap { position:relative; margin:0 auto; width:fit-content; box-shadow:0 2px 12px rgba(0,0,0,.25); background:#fff; }
+  canvas { display:block; }
+  .overlay { position:absolute; inset:0; cursor:crosshair; touch-action:none; user-select:none; }
+  .shade { position:absolute; background:rgba(0,0,0,.45); pointer-events:none; }
+  .sel { position:absolute; border:2px solid var(--accent); cursor:move; }
+  .h { position:absolute; width:12px; height:12px; background:#fff; border:2px solid var(--accent); border-radius:3px; }
+  .drop { border:2px dashed var(--line); border-radius:10px; padding:60px 20px; text-align:center; color:var(--muted); background:var(--panel); }
+  .drop.over { border-color:var(--accent); color:var(--text); }
+  .hint { font-size:12px; color:var(--muted); margin-top:8px; }
+  .status { font-size:13px; color:var(--muted); margin-top:8px; min-height:18px; }
+  @media (max-width:820px) { main { flex-direction:column; } aside { width:100%; position:static; } .viewer { max-height:none; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>PDF Crop Tool</h1><span>v1 · runs entirely in your browser, files never leave your device</span>
+</header>
+<main>
+  <aside>
+    <h2>1 · PDF</h2>
+    <div class="row"><button id="openBtn">Choose PDF…</button><span id="fname" class="hint" style="margin:0"></span></div>
+    <input id="file" type="file" accept="application/pdf" hidden>
+
+    <h2>2 · Crop area</h2>
+    <div class="row">
+      <label class="f" style="flex:1">Units
+        <select id="unit"><option value="mm">mm</option><option value="pt">points</option><option value="in">inches</option></select>
+      </label>
+    </div>
+    <div class="grid">
+      <label class="f">Left<input id="iX" type="number" step="any" disabled></label>
+      <label class="f">Top<input id="iY" type="number" step="any" disabled></label>
+      <label class="f">Width<input id="iW" type="number" step="any" disabled></label>
+      <label class="f">Height<input id="iH" type="number" step="any" disabled></label>
+    </div>
+    <div class="row" style="margin-top:8px">
+      <button id="selAll" disabled>Select whole page</button>
+      <button id="clearSel" disabled>Clear</button>
+    </div>
+    <div class="hint">Drag on the page to draw a box. Drag the box to move it, drag the squares to resize it, or type exact values above.</div>
+
+    <h2>3 · Apply to</h2>
+    <label class="radio"><input type="radio" name="scope" value="current" checked> This page only</label>
+    <label class="radio"><input type="radio" name="scope" value="all"> All pages (same relative area)</label>
+    <label class="radio"><input type="radio" name="scope" value="range"> Page range</label>
+    <input id="range" type="text" placeholder="e.g. 1-3, 5" style="width:100%;margin-top:4px;background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:6px 8px" disabled>
+    <label class="radio" style="margin-top:8px"><input type="radio" name="keep" value="crop" checked> Crop only chosen pages (keep others as is)</label>
+    <label class="radio"><input type="radio" name="keep" value="drop"> Output only chosen pages</label>
+
+    <h2>4 · Export</h2>
+    <button id="go" class="primary" disabled>Crop &amp; download</button>
+    <div id="status" class="status"></div>
+  </aside>
+
+  <section class="stage">
+    <div id="drop" class="drop">Drop a PDF here, or use <b>Choose PDF…</b></div>
+    <div id="app" hidden>
+      <div class="toolbar">
+        <button id="prev">‹ Prev</button><span id="pageinfo" class="pageinfo"></span><button id="next">Next ›</button>
+        <span class="sp"></span>
+        <button id="zout">−</button><span id="zoomlbl" class="pageinfo" style="min-width:50px"></span><button id="zin">+</button>
+      </div>
+      <div class="viewer" id="viewer">
+        <div class="pagewrap" id="pagewrap">
+          <canvas id="canvas"></canvas>
+          <div class="overlay" id="overlay"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+<script>
+(function () {
+  'use strict';
+  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+  const $ = id => document.getElementById(id);
+  const el = { file:$('file'), openBtn:$('openBtn'), fname:$('fname'), drop:$('drop'), app:$('app'),
+    canvas:$('canvas'), overlay:$('overlay'), wrap:$('pagewrap'), viewer:$('viewer'),
+    prev:$('prev'), next:$('next'), pageinfo:$('pageinfo'), zin:$('zin'), zout:$('zout'), zoomlbl:$('zoomlbl'),
+    unit:$('unit'), iX:$('iX'), iY:$('iY'), iW:$('iW'), iH:$('iH'),
+    selAll:$('selAll'), clearSel:$('clearSel'), range:$('range'), go:$('go'), status:$('status') };
+
+  const UNIT = { pt: 1, mm: 72 / 25.4, in: 72 };   // points per unit
+  const MIN = 10;                                   // minimum selection side, css px
+
+  let bytes = null, name = 'document', pdfDoc = null, pageNum = 1, numPages = 0;
+  let zoom = 1, cssW = 0, cssH = 0, ptW = 0, ptH = 0, renderTask = null;
+  let sel = null;   // {x,y,w,h} in css px of the displayed page (null = nothing selected)
+
+  const setStatus = t => el.status.textContent = t || '';
+
+  /* ---------- loading ---------- */
+  async function loadFile(file) {
+    if (!file) return;
+    if (file.type !== 'application/pdf' && !/\.pdf$/i.test(file.name)) { setStatus('That does not look like a PDF.'); return; }
+    try {
+      setStatus('Loading…');
+      bytes = new Uint8Array(await file.arrayBuffer());
+      name = file.name.replace(/\.pdf$/i, '');
+      pdfDoc = await pdfjsLib.getDocument({ data: bytes.slice() }).promise;
+      numPages = pdfDoc.numPages; pageNum = 1; sel = null;
+      el.fname.textContent = file.name + ' · ' + numPages + ' page' + (numPages > 1 ? 's' : '');
+      el.drop.hidden = true; el.app.hidden = false;
+      [el.selAll, el.clearSel, el.go, el.iX, el.iY, el.iW, el.iH].forEach(e => e.disabled = false);
+      await renderPage();
+      setStatus('');
+    } catch (err) {
+      console.error(err);
+      setStatus('Could not open that PDF (' + (err.message || err) + ').');
+    }
+  }
+
+  el.openBtn.onclick = () => el.file.click();
+  el.file.onchange = () => loadFile(el.file.files[0]);
+  ['dragenter', 'dragover'].forEach(t => document.addEventListener(t, e => { e.preventDefault(); el.drop.classList.add('over'); }));
+  ['dragleave', 'drop'].forEach(t => document.addEventListener(t, e => { e.preventDefault(); el.drop.classList.remove('over'); }));
+  document.addEventListener('drop', e => loadFile(e.dataTransfer.files[0]));
+
+  /* ---------- rendering ---------- */
+  async function renderPage() {
+    const page = await pdfDoc.getPage(pageNum);
+    const base = page.getViewport({ scale: 1 });
+    ptW = base.width; ptH = base.height;
+    const avail = Math.max(240, el.viewer.clientWidth - 34);
+    const fit = avail / ptW;
+    const scale = fit * zoom;
+    const vp = page.getViewport({ scale });
+    const dpr = window.devicePixelRatio || 1;
+
+    // keep selection proportional if the display size changes
+    if (sel && cssW) { const k = vp.width / cssW; sel = { x: sel.x*k, y: sel.y*k, w: sel.w*k, h: sel.h*k }; }
+    cssW = vp.width; cssH = vp.height;
+
+    el.canvas.width = Math.floor(cssW * dpr); el.canvas.height = Math.floor(cssH * dpr);
+    el.canvas.style.width = cssW + 'px'; el.canvas.style.height = cssH + 'px';
+    if (renderTask) { try { renderTask.cancel(); } catch (_) {} }
+    renderTask = page.render({ canvasContext: el.canvas.getContext('2d'), viewport: page.getViewport({ scale: scale * dpr }) });
+    try { await renderTask.promise; } catch (e) { if (e && e.name !== 'RenderingCancelledException') throw e; }
+
+    el.pageinfo.textContent = 'Page ' + pageNum + ' / ' + numPages;
+    el.zoomlbl.textContent = Math.round(zoom * 100) + '%';
+    el.prev.disabled = pageNum <= 1; el.next.disabled = pageNum >= numPages;
+    drawSel();
+  }
+
+  el.prev.onclick = () => { if (pageNum > 1) { pageNum--; renderPage(); } };
+  el.next.onclick = () => { if (pageNum < numPages) { pageNum++; renderPage(); } };
+  el.zin.onclick  = () => { zoom = Math.min(4, zoom * 1.25); renderPage(); };
+  el.zout.onclick = () => { zoom = Math.max(.3, zoom / 1.25); renderPage(); };
+  let rz; window.addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(() => pdfDoc && renderPage(), 200); });
+
+  /* ---------- selection overlay ---------- */
+  const HANDLES = ['nw','n','ne','e','se','s','sw','w'];
+  const HPOS = { nw:[0,0], n:[.5,0], ne:[1,0], e:[1,.5], se:[1,1], s:[.5,1], sw:[0,1], w:[0,.5] };
+  const HCUR = { nw:'nwse-resize', se:'nwse-resize', ne:'nesw-resize', sw:'nesw-resize', n:'ns-resize', s:'ns-resize', e:'ew-resize', w:'ew-resize' };
+
+  function drawSel() {
+    el.overlay.innerHTML = '';
+    if (!sel) { syncInputs(); return; }
+    const mk = (cls, css) => { const d = document.createElement('div'); d.className = cls; Object.assign(d.style, css); el.overlay.appendChild(d); return d; };
+    const px = v => v + 'px';
+    // four shade rectangles around the selection
+    mk('shade', { left:0, top:0, width:'100%', height:px(sel.y) });
+    mk('shade', { left:0, top:px(sel.y + sel.h), width:'100%', bottom:0 });
+    mk('shade', { left:0, top:px(sel.y), width:px(sel.x), height:px(sel.h) });
+    mk('shade', { left:px(sel.x + sel.w), top:px(sel.y), right:0, height:px(sel.h) });
+    const box = mk('sel', { left:px(sel.x), top:px(sel.y), width:px(sel.w), height:px(sel.h) });
+    box.dataset.mode = 'move';
+    HANDLES.forEach(h => {
+      const d = mk('h', { left:px(sel.x + sel.w*HPOS[h][0] - 6), top:px(sel.y + sel.h*HPOS[h][1] - 6), cursor:HCUR[h] });
+      d.dataset.mode = h;
+    });
+    syncInputs();
+  }
+
+  function syncInputs() {
+    const on = document.activeElement;
+    const u = UNIT[el.unit.value], k = ptW / cssW / u;
+    const fmt = v => String(Math.round(v * 100) / 100);
+    const set = (e, v) => { if (e !== on) e.value = sel ? fmt(v * k) : ''; };
+    set(el.iX, sel ? sel.x : 0); set(el.iY, sel ? sel.y : 0); set(el.iW, sel ? sel.w : 0); set(el.iH, sel ? sel.h : 0);
+  }
+
+  function fromInputs() {
+    const u = UNIT[el.unit.value], k = u * cssW / ptW;
+    let x = parseFloat(el.iX.value), y = parseFloat(el.iY.value), w = parseFloat(el.iW.value), h = parseFloat(el.iH.value);
+    if ([x, y, w, h].some(isNaN)) return;
+    x *= k; y *= k; w *= k; h *= k;
+    w = Math.max(MIN, Math.min(w, cssW)); h = Math.max(MIN, Math.min(h, cssH));
+    x = Math.max(0, Math.min(x, cssW - w)); y = Math.max(0, Math.min(y, cssH - h));
+    sel = { x, y, w, h }; drawSel();
+  }
+  [el.iX, el.iY, el.iW, el.iH].forEach(i => i.addEventListener('input', fromInputs));
+  [el.iX, el.iY, el.iW, el.iH].forEach(i => i.addEventListener('change', () => { i.blur(); drawSel(); }));
+  el.unit.onchange = syncInputs;
+  el.selAll.onclick = () => { sel = { x:0, y:0, w:cssW, h:cssH }; drawSel(); };
+  el.clearSel.onclick = () => { sel = null; drawSel(); };
+
+  // pointer interaction: draw / move / resize
+  let drag = null;
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  function pos(e) { const r = el.overlay.getBoundingClientRect(); return { x: clamp(e.clientX - r.left, 0, cssW), y: clamp(e.clientY - r.top, 0, cssH) }; }
+
+  el.overlay.addEventListener('pointerdown', e => {
+    const p = pos(e), mode = e.target.dataset && e.target.dataset.mode;
+    el.overlay.setPointerCapture(e.pointerId);
+    if (mode && sel) drag = { mode, p0: p, s0: { ...sel } };
+    else { drag = { mode: 'new', p0: p }; sel = { x: p.x, y: p.y, w: 0, h: 0 }; }
+    e.preventDefault();
+  });
+  el.overlay.addEventListener('pointermove', e => {
+    if (!drag) return;
+    const p = pos(e), d = drag, s = d.s0;
+    if (d.mode === 'new') {
+      sel = { x: Math.min(d.p0.x, p.x), y: Math.min(d.p0.y, p.y), w: Math.abs(p.x - d.p0.x), h: Math.abs(p.y - d.p0.y) };
+    } else if (d.mode === 'move') {
+      sel = { x: clamp(s.x + p.x - d.p0.x, 0, cssW - s.w), y: clamp(s.y + p.y - d.p0.y, 0, cssH - s.h), w: s.w, h: s.h };
+    } else {
+      let l = s.x, t = s.y, r = s.x + s.w, b = s.y + s.h;
+      if (d.mode.includes('w')) l = clamp(p.x, 0, r - MIN);
+      if (d.mode.includes('e')) r = clamp(p.x, l + MIN, cssW);
+      if (d.mode.includes('n')) t = clamp(p.y, 0, b - MIN);
+      if (d.mode.includes('s')) b = clamp(p.y, t + MIN, cssH);
+      sel = { x: l, y: t, w: r - l, h: b - t };
+    }
+    drawSel();
+  });
+  const endDrag = () => {
+    if (drag && sel && (sel.w < MIN || sel.h < MIN)) sel = null;   // a click without a drag clears
+    drag = null; drawSel();
+  };
+  el.overlay.addEventListener('pointerup', endDrag);
+  el.overlay.addEventListener('pointercancel', endDrag);
+
+  /* ---------- scope ---------- */
+  document.querySelectorAll('input[name=scope]').forEach(r => r.addEventListener('change', () => {
+    el.range.disabled = document.querySelector('input[name=scope]:checked').value !== 'range';
+  }));
+
+  function parseRange(text) {
+    const set = new Set();
+    for (const part of text.split(',').map(s => s.trim()).filter(Boolean)) {
+      const m = part.match(/^(\d+)(?:\s*-\s*(\d+))?$/);
+      if (!m) throw new Error('Bad page range "' + part + '"');
+      const a = +m[1], b = m[2] ? +m[2] : a;
+      if (a < 1 || b < a || b > numPages) throw new Error('Page range "' + part + '" is outside 1–' + numPages);
+      for (let i = a; i <= b; i++) set.add(i);
+    }
+    if (!set.size) throw new Error('Enter a page range');
+    return [...set].sort((a, b) => a - b);
+  }
+
+  /* ---------- crop & export ---------- */
+  el.go.onclick = async () => {
+    if (!sel) { setStatus('Draw a crop area on the page first.'); return; }
+    let pages;
+    try {
+      const scope = document.querySelector('input[name=scope]:checked').value;
+      pages = scope === 'current' ? [pageNum] : scope === 'all' ? Array.from({ length: numPages }, (_, i) => i + 1) : parseRange(el.range.value);
+    } catch (err) { setStatus(err.message); return; }
+    const dropOthers = document.querySelector('input[name=keep]:checked').value === 'drop';
+
+    el.go.disabled = true; setStatus('Cropping…');
+    try {
+      const out = await PDFLib.PDFDocument.load(bytes, { ignoreEncryption: true });
+      const fx0 = sel.x / cssW, fy0 = sel.y / cssH, fx1 = (sel.x + sel.w) / cssW, fy1 = (sel.y + sel.h) / cssH;
+
+      for (const n of pages) {
+        // pdf.js viewport knows rotation / existing CropBox; convert the selection to PDF user space
+        const vp = (await pdfDoc.getPage(n)).getViewport({ scale: 1 });
+        const a = vp.convertToPdfPoint(fx0 * vp.width, fy0 * vp.height);
+        const b = vp.convertToPdfPoint(fx1 * vp.width, fy1 * vp.height);
+        const x = Math.min(a[0], b[0]), y = Math.min(a[1], b[1]);
+        const w = Math.abs(a[0] - b[0]), h = Math.abs(a[1] - b[1]);
+        const pg = out.getPage(n - 1);
+        pg.setCropBox(x, y, w, h);
+        pg.setMediaBox(x, y, w, h);
+      }
+      if (dropOthers) {
+        const keep = new Set(pages);
+        for (let i = numPages; i >= 1; i--) if (!keep.has(i)) out.removePage(i - 1);
+      }
+
+      const blob = new Blob([await out.save()], { type: 'application/pdf' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob); a.download = name + '-cropped-v1.pdf';
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+      setStatus('Done — cropped ' + pages.length + ' page' + (pages.length > 1 ? 's' : '') + '.');
+    } catch (err) {
+      console.error(err);
+      setStatus('Crop failed: ' + (err.message || err));
+    } finally { el.go.disabled = false; }
+  };
+})();
+</script>
+</body>
+</html>
