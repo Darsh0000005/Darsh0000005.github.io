@@ -30,6 +30,33 @@
           <option value="small">Small file</option>
         </select>
       </div>
+      <div class="opts">
+        <label class="check"><input id="ocr" type="checkbox" /> Selectable text (OCR)</label>
+        <select id="ocr-lang" aria-label="Text language" hidden>
+          <option value="eng" selected>English</option>
+          <option value="eng+hin">English + Hindi</option>
+          <option value="hin">Hindi</option>
+          <option value="guj">Gujarati</option>
+          <option value="mar">Marathi</option>
+          <option value="ben">Bengali</option>
+          <option value="tam">Tamil</option>
+          <option value="tel">Telugu</option>
+          <option value="kan">Kannada</option>
+          <option value="mal">Malayalam</option>
+          <option value="pan">Punjabi</option>
+          <option value="urd">Urdu</option>
+          <option value="spa">Spanish</option>
+          <option value="fra">French</option>
+          <option value="deu">German</option>
+          <option value="ita">Italian</option>
+          <option value="por">Portuguese</option>
+          <option value="rus">Russian</option>
+          <option value="ara">Arabic</option>
+          <option value="chi_sim">Chinese (Simplified)</option>
+          <option value="jpn">Japanese</option>
+        </select>
+      </div>
+      <p id="ocr-hint" class="hint" hidden>Reads the words on each page so you can select, copy and search them. Pages look exactly the same. It runs on your device, so it's slower (about 1–2 seconds per page), and the first time it downloads about 7 MB.</p>
     </form>
 
     <section id="tasks" class="tasks" aria-live="polite"></section>
@@ -38,9 +65,10 @@
       <h2>How it works</h2>
       <ol>
         <li>Open the book on FlipHTML5 and copy the link from the address bar. Links like <code>fliphtml5.com/abcde/fghi/Title/</code> and <code>online.fliphtml5.com/abcde/fghi/</code> both work.</li>
-        <li>Paste it above and press <strong>Download PDF</strong>.</li>
+        <li>Paste it above and press <strong>Download PDF</strong>. Tick <strong>Selectable text</strong> first if you want to copy or search the text in the PDF.</li>
         <li>Keep the tab open while the pages load. The PDF saves when every page is done.</li>
       </ol>
+      <p class="note">FlipHTML5 stores most books as pictures of pages, so without OCR the PDF's text can't be selected. OCR is accurate on clean printed pages but can get the odd letter wrong, and may miss stylised headings or text inside photos.</p>
       <p class="note">Books the publisher marked as private or encrypted can't be downloaded. Only save books you have the right to keep, such as your own publications or ones the publisher allows you to download.</p>
     </section>
 
@@ -63,7 +91,7 @@
     </article>
   </template>
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
   <script src="app.js"></script>
 </body>

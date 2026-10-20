@@ -112,6 +112,18 @@ input:focus, select:focus, .btn:focus-visible {
 
 .opts select { padding: 6px 8px; }
 
+.check {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.check input { width: 18px; height: 18px; margin: 0; accent-color: var(--accent); }
+
+.hint { margin: 8px 0 0; color: var(--muted); font-size: 0.85rem; }
+
 .task-head { display: flex; gap: 14px; align-items: center; }
 
 .cover {

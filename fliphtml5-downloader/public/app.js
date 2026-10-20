@@ -10,6 +10,8 @@
     "https://static.fliphtml5.com/resourceFiles/html5_templates/js/deString.js",
   ];
   const PDF_WORKER = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+  const TESSERACT = "https://cdn.jsdelivr.net/npm/tesseract.js@7.0.0/dist/tesseract.min.js";
+  const OCR_WORKERS = Math.max(1, Math.min(4, Math.floor((navigator.hardwareConcurrency || 2) / 2)));
   const CONCURRENCY = 4;
   const PX_TO_PT = 0.75;
   const MAX_PT = 14400; // largest page side a PDF allows
@@ -23,6 +25,9 @@
   const form = document.getElementById("form");
   const input = document.getElementById("url");
   const qualitySelect = document.getElementById("quality");
+  const ocrCheck = document.getElementById("ocr");
+  const ocrLang = document.getElementById("ocr-lang");
+  const ocrHint = document.getElementById("ocr-hint");
   const tasksEl = document.getElementById("tasks");
   const tpl = document.getElementById("task-tpl");
 
@@ -31,6 +36,8 @@
   let running = 0;
   // Once a direct request fails (usually CORS), send the rest through the proxy.
   let directWorks = true;
+  // One Tesseract scheduler per language set, created on first use.
+  const ocrSchedulers = new Map();
 
   // ---------- networking ----------
 
@@ -283,39 +290,91 @@
     return out;
   }
 
+  // ---------- OCR ----------
+
+  function getOcr(lang) {
+    if (!ocrSchedulers.has(lang)) {
+      const ready = (async () => {
+        await loadScript(TESSERACT);
+        const { createScheduler, createWorker, OEM } = window.Tesseract;
+        const scheduler = createScheduler();
+        const workers = await Promise.all(Array.from({ length: OCR_WORKERS }, () => createWorker(lang, OEM.LSTM_ONLY)));
+        for (const w of workers) scheduler.addWorker(w);
+        return scheduler;
+      })();
+      // Let a failed download be retried on the next run.
+      ready.catch(() => ocrSchedulers.delete(lang));
+      ocrSchedulers.set(lang, ready);
+    }
+    return ocrSchedulers.get(lang);
+  }
+
+  // Returns a one-page PDF holding only Tesseract's invisible text layer,
+  // positioned over the image it was read from.
+  async function ocrLayer(scheduler, bytes) {
+    const { data } = await scheduler.addJob(
+      "recognize",
+      new Blob([bytes], { type: "image/jpeg" }),
+      { pdfTitle: "text", pdfTextOnly: true },
+      { text: false, pdf: true },
+    );
+    return new Uint8Array(data.pdf);
+  }
+
   // ---------- PDF assembly ----------
 
-  async function buildPdf(book, q, onProgress) {
-    const { jsPDF } = window.jspdf;
+  async function buildPdf(book, q, ocr, onProgress) {
+    const { PDFDocument } = window.PDFLib;
+    const doc = await PDFDocument.create();
+    doc.setTitle(book.title);
+    doc.setCreator("FlipHTML5 to PDF");
+
     const total = book.urls.length;
     const results = new Array(total);
     let next = 0;
     let added = 0;
     let done = 0;
     let failed = 0;
-    let doc = null;
+    let textMissed = 0;
 
-    const addPage = ({ bytes, w, h }) => {
+    const addPage = async ({ bytes, w, h, text }) => {
       let pw = (book.pageWidth || w) * PX_TO_PT;
       let ph = pw * (h / w);
       const fit = Math.min(1, MAX_PT / Math.max(pw, ph));
       pw *= fit;
       ph *= fit;
-      const orientation = pw > ph ? "l" : "p";
-      if (!doc) doc = new jsPDF({ unit: "pt", format: [pw, ph], orientation });
-      else doc.addPage([pw, ph], orientation);
-      doc.addImage(bytes, "JPEG", 0, 0, pw, ph, undefined, "NONE");
+      const page = doc.addPage([pw, ph]);
+      page.drawImage(await doc.embedJpg(bytes), { x: 0, y: 0, width: pw, height: ph });
+      if (text) {
+        try {
+          const [layer] = await doc.embedPdf(text);
+          page.drawPage(layer, { x: 0, y: 0, width: pw, height: ph });
+        } catch (err) {
+          console.warn("Couldn't add a text layer:", err);
+          textMissed++;
+        }
+      }
       added++;
     };
 
     // Pages finish out of order; add them to the PDF in order as soon as
     // the next one is ready so finished images don't pile up in memory.
+    // Flushes are chained so two can't run at once.
+    let flushing = Promise.resolve();
     const flush = () => {
-      while (next < total && results[next] !== undefined) {
-        for (const p of results[next]) addPage(p);
-        results[next] = null;
-        next++;
-      }
+      flushing = flushing.then(async () => {
+        while (next < total && results[next] !== undefined) {
+          try {
+            for (const p of results[next]) await addPage(p);
+          } catch (err) {
+            console.warn(`Page ${next + 1} couldn't be added:`, err);
+            failed++;
+          }
+          results[next] = null;
+          next++;
+        }
+      });
+      return flushing;
     };
 
     let cursor = 0;
@@ -324,7 +383,18 @@
         const i = cursor++;
         const url = book.urls[i];
         try {
-          results[i] = isZip(url) ? await zipPage(url, q) : await imagePage(url, q);
+          const images = isZip(url) ? await zipPage(url, q) : await imagePage(url, q);
+          if (ocr) {
+            for (const img of images) {
+              try {
+                img.text = await ocrLayer(ocr, img.bytes);
+              } catch (err) {
+                console.warn(`Text recognition failed on page ${i + 1}:`, err);
+                textMissed++;
+              }
+            }
+          }
+          results[i] = images;
         } catch (err) {
           console.warn(`Page ${i + 1} failed:`, err);
           results[i] = [];
@@ -336,11 +406,13 @@
       }
     };
     await Promise.all(Array.from({ length: Math.min(CONCURRENCY, total) }, worker));
+    await flush();
 
-    if (!doc || added === 0) {
+    if (added === 0) {
       throw new Error("None of the pages could be downloaded. FlipHTML5 may be blocking requests right now.");
     }
-    return { blob: doc.output("blob"), failed };
+    const bytes = await doc.save();
+    return { blob: new Blob([bytes], { type: "application/pdf" }), failed, textMissed };
   }
 
   // ---------- UI ----------
@@ -411,29 +483,41 @@
     }
 
     const q = QUALITY[qualitySelect.value] || QUALITY.balanced;
+    const lang = ocrCheck.checked ? ocrLang.value : null;
     running++;
     try {
       task.status("Reading book details...");
       const book = await loadBook(ids);
       task.title(book.title);
       task.cover(book.cover);
+
+      let ocr = null;
+      if (lang) {
+        task.status("Loading text recognition...");
+        try {
+          ocr = await getOcr(lang);
+        } catch (err) {
+          console.error(err);
+          throw new Error("Couldn't load text recognition. Check your connection, or untick Selectable text.");
+        }
+      }
       task.status(`Downloading ${book.urls.length} pages...`);
 
-      const { blob, failed } = await buildPdf(book, q, (done, total) => {
+      const { blob, failed, textMissed } = await buildPdf(book, q, ocr, (done, total) => {
         task.progress(done / total);
-        task.status(`Page ${done} of ${total}`);
+        task.status(ocr ? `Page ${done} of ${total}, reading text` : `Page ${done} of ${total}`);
       });
 
       const filename = safeFilename(book.title);
       const blobUrl = saveBlob(blob, filename);
       const mb = (blob.size / 1048576).toFixed(1);
+      const notes = [];
+      if (ocr) notes.push("Text is selectable.");
+      if (failed) notes.push(`${failed} page${failed === 1 ? "" : "s"} couldn't be downloaded and ${failed === 1 ? "was" : "were"} skipped.`);
+      if (textMissed) notes.push(`${textMissed} page${textMissed === 1 ? " has" : "s have"} no selectable text.`);
       task.progress(1);
       task.state("done");
-      task.status(
-        failed
-          ? `Saved ${filename} (${mb} MB). ${failed} page${failed === 1 ? "" : "s"} couldn't be downloaded and ${failed === 1 ? "was" : "were"} skipped.`
-          : `Saved ${filename} (${mb} MB).`,
-      );
+      task.status([`Saved ${filename} (${mb} MB).`, ...notes].join(" "));
 
       const again = document.createElement("a");
       again.className = "btn";
@@ -473,6 +557,37 @@
       e.returnValue = "";
     }
   });
+
+  // Remember this visitor's options. Storage can be unavailable (private
+  // mode, blocked site data), so every access is guarded.
+  const PREFS_KEY = "fliphtml5-pdf-prefs";
+  function savePrefs() {
+    try {
+      localStorage.setItem(PREFS_KEY, JSON.stringify({ quality: qualitySelect.value, ocr: ocrCheck.checked, lang: ocrLang.value }));
+    } catch {
+      // not saved; the page works the same
+    }
+  }
+  try {
+    const prefs = JSON.parse(localStorage.getItem(PREFS_KEY) || "{}");
+    if (QUALITY[prefs.quality]) qualitySelect.value = prefs.quality;
+    if (typeof prefs.ocr === "boolean") ocrCheck.checked = prefs.ocr;
+    if (prefs.lang && ocrLang.querySelector(`option[value="${CSS.escape(prefs.lang)}"]`)) ocrLang.value = prefs.lang;
+  } catch {
+    // keep the defaults
+  }
+
+  const syncOcr = () => {
+    ocrLang.hidden = !ocrCheck.checked;
+    ocrHint.hidden = !ocrCheck.checked;
+  };
+  syncOcr();
+  ocrCheck.addEventListener("change", () => {
+    syncOcr();
+    savePrefs();
+  });
+  qualitySelect.addEventListener("change", savePrefs);
+  ocrLang.addEventListener("change", savePrefs);
 
   const shared = new URLSearchParams(location.search).get("url");
   if (shared) input.value = shared;

@@ -6,7 +6,8 @@ account.
 
 Ported from [nyr-github/fliphtml5-downloader](https://github.com/nyr-github/fliphtml5-downloader)
 (MIT). The original is a full Next.js app with a database, payments and a
-community library; this version keeps only the downloader.
+community library; this version keeps only the downloader and adds an
+optional OCR text layer.
 
 ## How it works
 
@@ -17,7 +18,21 @@ community library; this version keeps only the downloader.
 3. Downloads each page. Image pages are used directly. `.zip` pages are
    obfuscated, password-protected PDFs; they're unwrapped and rendered with
    PDF.js.
-4. Puts all pages into one PDF with jsPDF and saves it.
+4. Puts all pages into one PDF with pdf-lib and saves it.
+
+### Selectable text (OCR)
+
+FlipHTML5 stores most books as page pictures, so the PDF has no text unless
+you tick **Selectable text (OCR)**. Then each page is run through
+[Tesseract.js](https://github.com/naptha/tesseract.js) in the browser, which
+produces a text-only PDF layer (invisible text placed over each word). That
+layer is drawn on top of the unchanged page image, so pages look identical
+but text can be selected, copied and searched.
+
+- Runs on the visitor's device: about 1–2 s per page.
+- First use downloads the OCR engine (~4 MB) and the language data
+  (1.4–3 MB per language) from jsDelivr; the browser caches them.
+- 20 languages, including Hindi and other Indian languages.
 
 The browser asks FlipHTML5 for each file directly. If that's blocked (CORS),
 it falls back to `/api/proxy`, a Netlify Function that fetches only
