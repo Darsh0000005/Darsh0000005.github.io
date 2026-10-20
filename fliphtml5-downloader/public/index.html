@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>FlipHTML5 to PDF</title>
+  <meta name="description" content="Paste a FlipHTML5 link and save the flipbook as a PDF. Runs in your browser." />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%232563eb' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z'/%3E%3Cpath d='M14 2v6h6'/%3E%3Cpath d='M12 18v-6'/%3E%3Cpath d='m9 15 3 3 3-3'/%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <main class="wrap">
+    <header class="hero">
+      <h1>FlipHTML5 to PDF</h1>
+      <p class="lede">Paste a FlipHTML5 book link. Your browser fetches each page and saves the book as a PDF.</p>
+    </header>
+
+    <form id="form" class="card" autocomplete="off">
+      <label for="url" class="label">FlipHTML5 link</label>
+      <div class="row">
+        <input id="url" name="url" type="url" inputmode="url" required
+               placeholder="https://online.fliphtml5.com/abcde/fghi/" />
+        <button id="go" type="submit" class="btn">Download PDF</button>
+      </div>
+      <div class="opts">
+        <label for="quality">Quality</label>
+        <select id="quality">
+          <option value="best">Best (full resolution, larger file)</option>
+          <option value="balanced" selected>Balanced</option>
+          <option value="small">Small file</option>
+        </select>
+      </div>
+    </form>
+
+    <section id="tasks" class="tasks" aria-live="polite"></section>
+
+    <section class="card help">
+      <h2>How it works</h2>
+      <ol>
+        <li>Open the book on FlipHTML5 and copy the link from the address bar. Links like <code>fliphtml5.com/abcde/fghi/Title/</code> and <code>online.fliphtml5.com/abcde/fghi/</code> both work.</li>
+        <li>Paste it above and press <strong>Download PDF</strong>.</li>
+        <li>Keep the tab open while the pages load. The PDF saves when every page is done.</li>
+      </ol>
+      <p class="note">Books the publisher marked as private or encrypted can't be downloaded. Only save books you have the right to keep, such as your own publications or ones the publisher allows you to download.</p>
+    </section>
+
+    <footer class="foot">
+      Based on the MIT-licensed <a href="https://github.com/nyr-github/fliphtml5-downloader" rel="noopener">fliphtml5-downloader</a> by nyr-github. Not affiliated with FlipHTML5.
+    </footer>
+  </main>
+
+  <template id="task-tpl">
+    <article class="card task">
+      <div class="task-head">
+        <img class="cover" alt="" hidden />
+        <div class="task-meta">
+          <h3 class="title"></h3>
+          <p class="status"></p>
+        </div>
+      </div>
+      <div class="bar"><span></span></div>
+      <div class="task-actions"></div>
+    </article>
+  </template>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
