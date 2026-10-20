@@ -4,95 +4,190 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>FlipHTML5 to PDF</title>
-  <meta name="description" content="Paste a FlipHTML5 link and save the flipbook as a PDF. Runs in your browser." />
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%232563eb' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z'/%3E%3Cpath d='M14 2v6h6'/%3E%3Cpath d='M12 18v-6'/%3E%3Cpath d='m9 15 3 3 3-3'/%3E%3C/svg%3E" />
+  <meta name="description" content="Paste a FlipHTML5 link and save the book as a PDF, with optional selectable text (OCR). Free, no sign-up, runs in your browser." />
+  <meta property="og:title" content="FlipHTML5 to PDF" />
+  <meta property="og:description" content="Paste a FlipHTML5 link and save the book as a PDF, with optional selectable text." />
+  <meta property="og:type" content="website" />
+  <meta name="theme-color" content="#f5f5fb" media="(prefers-color-scheme: light)" />
+  <meta name="theme-color" content="#08080f" media="(prefers-color-scheme: dark)" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%237c3aed'/%3E%3Cstop offset='.55' stop-color='%234f46e5'/%3E%3Cstop offset='1' stop-color='%2306b6d4'/%3E%3C/linearGradient%3E%3C/defs%3E%3Ccircle cx='16' cy='16' r='15' fill='url(%23g)'/%3E%3Crect x='10.4' y='10' width='3.4' height='8.5' rx='1.7' fill='white'/%3E%3Crect x='18.2' y='10' width='3.4' height='8.5' rx='1.7' fill='white'/%3E%3C/svg%3E" />
+  <link rel="preload" href="fonts/plus-jakarta-sans-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin />
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <main class="wrap">
-    <header class="hero">
-      <h1>FlipHTML5 to PDF</h1>
-      <p class="lede">Paste a FlipHTML5 book link. Your browser fetches each page and saves the book as a PDF.</p>
-    </header>
+  <div class="backdrop" aria-hidden="true"></div>
 
-    <form id="form" class="card" autocomplete="off">
-      <label for="url" class="label">FlipHTML5 link</label>
-      <div class="row">
-        <input id="url" name="url" type="url" inputmode="url" required
-               placeholder="https://online.fliphtml5.com/abcde/fghi/" />
-        <button id="go" type="submit" class="btn">Download PDF</button>
+  <header class="nav">
+    <a class="brand" href="./">
+      <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true">
+        <defs>
+          <linearGradient id="brand-grad" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#7c3aed" />
+            <stop offset=".55" stop-color="#4f46e5" />
+            <stop offset="1" stop-color="#06b6d4" />
+          </linearGradient>
+        </defs>
+        <circle cx="16" cy="16" r="15" fill="url(#brand-grad)" />
+        <rect x="10.4" y="10" width="3.4" height="8.5" rx="1.7" fill="#fff" />
+        <rect x="18.2" y="10" width="3.4" height="8.5" rx="1.7" fill="#fff" />
+      </svg>
+      FlipHTML5 to PDF
+    </a>
+    <nav class="nav-links" aria-label="Page sections">
+      <a href="#how">How it works</a>
+      <a href="#faq">FAQ</a>
+    </nav>
+  </header>
+
+  <main class="wrap">
+    <section class="hero">
+      <div class="buddy">
+        <canvas id="orb" class="orb" width="280" height="280" aria-hidden="true"></canvas>
+        <p id="bubble" class="bubble">Paste a FlipHTML5 link and I'll turn it into a PDF.</p>
       </div>
-      <div class="opts">
-        <label for="quality">Quality</label>
-        <select id="quality">
-          <option value="best">Best (full resolution, larger file)</option>
-          <option value="balanced" selected>Balanced</option>
-          <option value="small">Small file</option>
-        </select>
+      <h1>Turn FlipHTML5 books into <span class="grad-text">PDFs</span></h1>
+      <p class="lede">Paste a link and press download. Pages stay sharp, and OCR can make the text selectable.</p>
+    </section>
+
+    <form id="form" class="panel" autocomplete="off">
+      <label for="url" class="sr-only">FlipHTML5 link</label>
+      <div class="field">
+        <svg class="field-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg>
+        <input id="url" name="url" type="url" inputmode="url" required placeholder="Paste a FlipHTML5 link" />
+        <svg class="field-ok" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg>
+        <button id="paste" type="button" class="paste" hidden>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="2" width="8" height="4" rx="1" /><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" /></svg>
+          Paste
+        </button>
       </div>
-      <div class="opts">
-        <label class="check"><input id="ocr" type="checkbox" /> Selectable text (OCR)</label>
-        <select id="ocr-lang" aria-label="Text language" hidden>
-          <option value="eng" selected>English</option>
-          <option value="eng+hin">English + Hindi</option>
-          <option value="hin">Hindi</option>
-          <option value="guj">Gujarati</option>
-          <option value="mar">Marathi</option>
-          <option value="ben">Bengali</option>
-          <option value="tam">Tamil</option>
-          <option value="tel">Telugu</option>
-          <option value="kan">Kannada</option>
-          <option value="mal">Malayalam</option>
-          <option value="pan">Punjabi</option>
-          <option value="urd">Urdu</option>
-          <option value="spa">Spanish</option>
-          <option value="fra">French</option>
-          <option value="deu">German</option>
-          <option value="ita">Italian</option>
-          <option value="por">Portuguese</option>
-          <option value="rus">Russian</option>
-          <option value="ara">Arabic</option>
-          <option value="chi_sim">Chinese (Simplified)</option>
-          <option value="jpn">Japanese</option>
-        </select>
+      <button id="go" type="submit" class="btn btn-primary">
+        Download PDF
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12" /><path d="m7 10 5 5 5-5" /><path d="M5 21h14" /></svg>
+      </button>
+
+      <div class="options">
+        <fieldset id="quality-group" class="seg">
+          <legend class="sr-only">Quality</legend>
+          <span class="opt-label" aria-hidden="true">Quality</span>
+          <label><input type="radio" name="quality" value="best" /><span>Best</span></label>
+          <label><input type="radio" name="quality" value="balanced" checked /><span>Balanced</span></label>
+          <label><input type="radio" name="quality" value="small" /><span>Small</span></label>
+        </fieldset>
+
+        <div class="ocr-row">
+          <label class="switch"><input id="ocr" type="checkbox" role="switch" /> Selectable text (OCR)</label>
+          <select id="ocr-lang" class="select" aria-label="Text language" hidden>
+            <option value="eng" selected>English</option>
+            <option value="eng+hin">English + Hindi</option>
+            <option value="hin">Hindi</option>
+            <option value="guj">Gujarati</option>
+            <option value="mar">Marathi</option>
+            <option value="ben">Bengali</option>
+            <option value="tam">Tamil</option>
+            <option value="tel">Telugu</option>
+            <option value="kan">Kannada</option>
+            <option value="mal">Malayalam</option>
+            <option value="pan">Punjabi</option>
+            <option value="urd">Urdu</option>
+            <option value="spa">Spanish</option>
+            <option value="fra">French</option>
+            <option value="deu">German</option>
+            <option value="ita">Italian</option>
+            <option value="por">Portuguese</option>
+            <option value="rus">Russian</option>
+            <option value="ara">Arabic</option>
+            <option value="chi_sim">Chinese (Simplified)</option>
+            <option value="jpn">Japanese</option>
+          </select>
+        </div>
       </div>
-      <p id="ocr-hint" class="hint" hidden>Reads the words on each page so you can select, copy and search them. Pages look exactly the same. It runs on your device, so it's slower (about 1–2 seconds per page), and the first time it downloads about 7 MB.</p>
+      <p id="ocr-hint" class="hint" hidden>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3Z" /></svg>
+        <span>Reads the words on each page so you can select, copy and search them. Pages look exactly the same. It runs on your device, so it's slower (about 1–2 seconds per page), and the first time it downloads about 7 MB.</span>
+      </p>
     </form>
 
     <section id="tasks" class="tasks" aria-live="polite"></section>
 
-    <section class="card help">
+    <ul class="chips" aria-label="Highlights">
+      <li><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>Runs in your browser</li>
+      <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg>No sign-up</li>
+      <li><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" /><path d="M2 12h20" /><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" /></svg>OCR in 20 languages</li>
+      <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m16 18 6-6-6-6" /><path d="m8 6-6 6 6 6" /></svg>Free and open source</li>
+    </ul>
+
+    <section id="how" class="section">
       <h2>How it works</h2>
-      <ol>
-        <li>Open the book on FlipHTML5 and copy the link from the address bar. Links like <code>fliphtml5.com/abcde/fghi/Title/</code> and <code>online.fliphtml5.com/abcde/fghi/</code> both work.</li>
-        <li>Paste it above and press <strong>Download PDF</strong>. Tick <strong>Selectable text</strong> first if you want to copy or search the text in the PDF.</li>
-        <li>Keep the tab open while the pages load. The PDF saves when every page is done.</li>
+      <ol class="steps">
+        <li>
+          <span class="step-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg></span>
+          <h3>Copy the link</h3>
+          <p>Open the book on FlipHTML5 and copy the link from your browser's address bar.</p>
+        </li>
+        <li>
+          <span class="step-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 21v-7" /><path d="M4 10V3" /><path d="M12 21v-9" /><path d="M12 8V3" /><path d="M20 21v-5" /><path d="M20 12V3" /><path d="M2 14h4" /><path d="M10 8h4" /><path d="M18 16h4" /></svg></span>
+          <h3>Paste and choose</h3>
+          <p>Pick a quality. Turn on Selectable text if you want to copy or search the words in your PDF.</p>
+        </li>
+        <li>
+          <span class="step-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12" /><path d="m7 10 5 5 5-5" /><path d="M5 21h14" /></svg></span>
+          <h3>Get your PDF</h3>
+          <p>Keep the tab open while the pages load. The PDF saves to your downloads when every page is done.</p>
+        </li>
       </ol>
-      <p class="note">FlipHTML5 stores most books as pictures of pages, so without OCR the PDF's text can't be selected. OCR is accurate on clean printed pages but can get the odd letter wrong, and may miss stylised headings or text inside photos.</p>
-      <p class="note">Books the publisher marked as private or encrypted can't be downloaded. Only save books you have the right to keep, such as your own publications or ones the publisher allows you to download.</p>
+    </section>
+
+    <section id="faq" class="section faq">
+      <h2>Questions</h2>
+      <details>
+        <summary>Why can't I select text in my PDF?</summary>
+        <p>FlipHTML5 stores most books as pictures of pages, so there's no text to copy. Turn on Selectable text (OCR) and the site reads the words and adds an invisible text layer over each page. You can then select, copy and search, and the pages look exactly the same.</p>
+      </details>
+      <details>
+        <summary>How accurate is the text?</summary>
+        <p>Very good on clean printed pages. It can get the odd letter wrong, and it may miss stylised headings or text inside photos.</p>
+      </details>
+      <details>
+        <summary>Why did my book fail?</summary>
+        <p>Books the publisher marked as private or encrypted can't be downloaded. Check that the link opens the book on FlipHTML5, then try again.</p>
+      </details>
+      <details>
+        <summary>Do I need to upload anything?</summary>
+        <p>No. There's no account and no upload. Your PDF is put together in your browser, and OCR runs on your device.</p>
+      </details>
     </section>
 
     <footer class="foot">
-      Based on the MIT-licensed <a href="https://github.com/nyr-github/fliphtml5-downloader" rel="noopener">fliphtml5-downloader</a> by nyr-github. Not affiliated with FlipHTML5.
+      <p>Only download books you have the right to keep, such as your own publications or ones the publisher allows you to download.</p>
+      <p>Based on the MIT-licensed <a href="https://github.com/nyr-github/fliphtml5-downloader" rel="noopener">fliphtml5-downloader</a> by nyr-github. Not affiliated with FlipHTML5.</p>
     </footer>
   </main>
 
   <template id="task-tpl">
-    <article class="card task">
-      <div class="task-head">
+    <article class="task">
+      <div class="cover-wrap">
         <img class="cover" alt="" hidden />
-        <div class="task-meta">
-          <h3 class="title"></h3>
-          <p class="status"></p>
+        <div class="ph" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><path d="M14 2v6h6" /></svg>
         </div>
+        <span class="badge" aria-hidden="true"></span>
       </div>
-      <div class="bar"><span></span></div>
-      <div class="task-actions"></div>
+      <div class="task-body">
+        <div class="task-top">
+          <h3 class="title"></h3>
+          <span class="pct"></span>
+        </div>
+        <p class="status"></p>
+        <div class="bar"><span></span></div>
+        <div class="task-actions"></div>
+      </div>
     </article>
   </template>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script src="orb.js"></script>
   <script src="app.js"></script>
+  <script src="ui.js"></script>
 </body>
 </html>

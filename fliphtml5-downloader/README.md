@@ -45,10 +45,17 @@ Books the publisher marked as private/encrypted are refused.
 ```
 public/index.html        page
 public/app.js            downloader logic
-public/style.css         styles
+public/orb.js            Dot, the animated 3D dot-sphere mascot (canvas, no libraries)
+public/ui.js             mascot moods, speech bubble, Paste button, link check
+public/style.css         styles (light and dark)
+public/fonts/            Plus Jakarta Sans, self-hosted (SIL OFL, see OFL.txt)
 netlify/functions/proxy.mts   CORS fallback (served at /api/proxy)
 netlify.toml             publish dir + functions dir
 ```
+
+app.js reports what a download is doing with `downloader` events on
+`document` (`start`, `book`, `ocr-loading`, `progress`, `done`, `error`);
+ui.js turns those into Dot's moods and speech bubble.
 
 ## Deploy to Netlify
 

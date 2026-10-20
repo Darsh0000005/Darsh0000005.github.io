@@ -24,7 +24,7 @@
 
   const form = document.getElementById("form");
   const input = document.getElementById("url");
-  const qualitySelect = document.getElementById("quality");
+  const qualityGroup = document.getElementById("quality-group");
   const ocrCheck = document.getElementById("ocr");
   const ocrLang = document.getElementById("ocr-lang");
   const ocrHint = document.getElementById("ocr-hint");
@@ -417,13 +417,27 @@
 
   // ---------- UI ----------
 
+  // Tells the rest of the page (the mascot and its speech bubble in ui.js)
+  // what a download is doing.
+  function announce(state, detail = {}) {
+    document.dispatchEvent(new CustomEvent("downloader", { detail: { state, ...detail } }));
+  }
+
+  function formatEta(ms) {
+    const s = ms / 1000;
+    if (s < 60) return `${Math.max(5, Math.round(s / 5) * 5)}s left`;
+    return `${Math.round(s / 60)} min left`;
+  }
+
   function createTask(label) {
     const el = tpl.content.firstElementChild.cloneNode(true);
     const titleEl = el.querySelector(".title");
     const statusEl = el.querySelector(".status");
     const barEl = el.querySelector(".bar span");
+    const pctEl = el.querySelector(".pct");
     const actionsEl = el.querySelector(".task-actions");
     const coverEl = el.querySelector(".cover");
+    let clock = null; // first progress report, for the time-left estimate
     titleEl.textContent = label;
     tasksEl.prepend(el);
 
@@ -442,7 +456,13 @@
         statusEl.textContent = t;
       },
       progress(frac) {
-        barEl.style.width = `${Math.round(frac * 100)}%`;
+        const pct = Math.round(frac * 100);
+        barEl.style.width = `${pct}%`;
+        const now = performance.now();
+        if (!clock) clock = { at: now, frac };
+        const rate = (frac - clock.frac) / (now - clock.at);
+        const eta = frac < 1 && rate > 0 && now - clock.at > 3000 ? ` · ${formatEta((1 - frac) / rate)}` : "";
+        pctEl.textContent = `${pct}%${eta}`;
       },
       state(s) {
         el.classList.remove("done", "error");
@@ -477,23 +497,28 @@
     const ids = parseBookUrl(rawUrl);
     const task = createTask(ids ? ids.id2 : rawUrl);
     if (!ids) {
+      const message = "That doesn't look like a FlipHTML5 book link. It should look like fliphtml5.com/abcde/fghi/.";
       task.state("error");
-      task.status("That doesn't look like a FlipHTML5 book link. It should look like fliphtml5.com/abcde/fghi/.");
+      task.status(message);
+      announce("error", { message });
       return;
     }
 
-    const q = QUALITY[qualitySelect.value] || QUALITY.balanced;
+    const q = QUALITY[form.elements.quality.value] || QUALITY.balanced;
     const lang = ocrCheck.checked ? ocrLang.value : null;
     running++;
+    announce("start");
     try {
       task.status("Reading book details...");
       const book = await loadBook(ids);
       task.title(book.title);
       task.cover(book.cover);
+      announce("book", { title: book.title, pages: book.urls.length });
 
       let ocr = null;
       if (lang) {
         task.status("Loading text recognition...");
+        if (!ocrSchedulers.has(lang)) announce("ocr-loading");
         try {
           ocr = await getOcr(lang);
         } catch (err) {
@@ -506,6 +531,7 @@
       const { blob, failed, textMissed } = await buildPdf(book, q, ocr, (done, total) => {
         task.progress(done / total);
         task.status(ocr ? `Page ${done} of ${total}, reading text` : `Page ${done} of ${total}`);
+        announce("progress", { done, total, ocr: !!ocr });
       });
 
       const filename = safeFilename(book.title);
@@ -518,6 +544,7 @@
       task.progress(1);
       task.state("done");
       task.status([`Saved ${filename} (${mb} MB).`, ...notes].join(" "));
+      announce("done", { filename, ocr: !!ocr });
 
       const again = document.createElement("a");
       again.className = "btn";
@@ -527,8 +554,10 @@
       task.action(again);
     } catch (err) {
       console.error(err);
+      const message = err && err.message ? err.message : "Something went wrong.";
       task.state("error");
-      task.status(err && err.message ? err.message : "Something went wrong.");
+      task.status(message);
+      announce("error", { message });
       const retry = document.createElement("button");
       retry.type = "button";
       retry.className = "btn ghost";
@@ -563,14 +592,14 @@
   const PREFS_KEY = "fliphtml5-pdf-prefs";
   function savePrefs() {
     try {
-      localStorage.setItem(PREFS_KEY, JSON.stringify({ quality: qualitySelect.value, ocr: ocrCheck.checked, lang: ocrLang.value }));
+      localStorage.setItem(PREFS_KEY, JSON.stringify({ quality: form.elements.quality.value, ocr: ocrCheck.checked, lang: ocrLang.value }));
     } catch {
       // not saved; the page works the same
     }
   }
   try {
     const prefs = JSON.parse(localStorage.getItem(PREFS_KEY) || "{}");
-    if (QUALITY[prefs.quality]) qualitySelect.value = prefs.quality;
+    if (QUALITY[prefs.quality]) form.elements.quality.value = prefs.quality;
     if (typeof prefs.ocr === "boolean") ocrCheck.checked = prefs.ocr;
     if (prefs.lang && ocrLang.querySelector(`option[value="${CSS.escape(prefs.lang)}"]`)) ocrLang.value = prefs.lang;
   } catch {
@@ -586,7 +615,7 @@
     syncOcr();
     savePrefs();
   });
-  qualitySelect.addEventListener("change", savePrefs);
+  qualityGroup.addEventListener("change", savePrefs);
   ocrLang.addEventListener("change", savePrefs);
 
   const shared = new URLSearchParams(location.search).get("url");
