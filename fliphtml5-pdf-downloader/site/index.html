@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>FlipHTML5 to PDF</title>
+  <meta name="description" content="Paste a FlipHTML5 link and download the flipbook as a PDF. Everything happens in your browser.">
+  <meta name="color-scheme" content="light dark">
+  <meta name="theme-color" content="#c94a1a">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <header class="site-header">
+    <div class="wrap">
+      <a class="brand" href="./">
+        <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true">
+          <rect width="32" height="32" rx="8" fill="currentColor"/>
+          <path d="M9 7h9l5 5v13H9z" fill="#fff"/>
+          <path d="M18 7v5h5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+          <path d="M16 15v6m-3-3 3 3 3-3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span>FlipHTML5 to PDF</span>
+      </a>
+    </div>
+  </header>
+
+  <main id="main" class="wrap">
+    <section class="hero">
+      <h1>Turn a FlipHTML5 flipbook into a PDF</h1>
+      <p class="lede">Paste the book’s link and your PDF downloads when it’s ready. Pages travel straight from FlipHTML5 to your browser and are put together on your device. Nothing is uploaded to this site.</p>
+
+      <form id="link-form" class="card" novalidate>
+        <label class="label" for="link-input">FlipHTML5 link</label>
+        <div class="field">
+          <input id="link-input" type="text" inputmode="url" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="https://fliphtml5.com/xxxx/yyyy/" aria-describedby="link-hint form-error">
+          <button class="btn btn-primary" type="submit">Convert to PDF</button>
+        </div>
+        <div id="form-error" class="form-error" role="alert" hidden></div>
+        <p id="link-hint" class="hint">Paste several links, separated by spaces or new lines, to queue them all.</p>
+        <label class="check">
+          <input id="auto-download" type="checkbox" checked>
+          <span>Download each PDF automatically when it’s ready</span>
+        </label>
+      </form>
+
+      <p class="fineprint">For personal, educational use. Only convert books you’re entitled to copy, and respect each publisher’s rights. Books marked private or protected are not converted.</p>
+    </section>
+
+    <section id="queue-section" class="queue" aria-labelledby="queue-title" hidden>
+      <h2 id="queue-title">Your conversions</h2>
+      <ul id="task-list" class="task-list"></ul>
+    </section>
+
+    <section class="info" aria-labelledby="how-title">
+      <h2 id="how-title">How it works</h2>
+      <ol class="steps">
+        <li><strong>Paste a link.</strong> Open the book on fliphtml5.com and copy the address from your browser’s address bar.</li>
+        <li><strong>Pages are collected.</strong> Your browser downloads each page image directly from FlipHTML5, a few at a time.</li>
+        <li><strong>The PDF is built here.</strong> The pages are stitched into a PDF on your device and saved to your downloads.</li>
+      </ol>
+
+      <div class="faq">
+        <details>
+          <summary>What does a valid link look like?</summary>
+          <p>Something like <code>https://fliphtml5.com/abcd/efgh/</code> or <code>https://online.fliphtml5.com/abcd/efgh/</code>. The two short codes after the domain identify the book; anything after them is ignored.</p>
+        </details>
+        <details>
+          <summary>Is anything uploaded or stored?</summary>
+          <p>No. This site is just a web page. Downloads go from FlipHTML5 to your browser, and the PDF is created in your browser’s memory. There are no accounts, no database and no server that sees your books.</p>
+        </details>
+        <details>
+          <summary>Why won’t some books convert?</summary>
+          <p>Books their publisher marked as private or protected are refused on purpose, and so are books that were removed or need a password. Very large books (over 2,000 pages) are also refused because a browser can’t safely hold them all at once.</p>
+        </details>
+        <details>
+          <summary>Why are there blank pages in my PDF?</summary>
+          <p>A page that still can’t be downloaded after a few attempts is replaced with a blank page, and the card tells you which ones. Use <em>Convert</em> again to fill them in.</p>
+        </details>
+        <details>
+          <summary>Can I select or search the text?</summary>
+          <p>No. FlipHTML5 serves each page as a picture, so the PDF is made of page images without a text layer.</p>
+        </details>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap">
+      <p>Based on the open-source <a href="https://github.com/nyr-github/fliphtml5-downloader" rel="noopener noreferrer">fliphtml5-downloader</a> (MIT licence). Not affiliated with FlipHTML5.</p>
+    </div>
+  </footer>
+
+  <div id="live" class="sr-only" aria-live="polite"></div>
+
+  <template id="task-template">
+    <li class="task" data-state="queued" data-retryable="true">
+      <div class="cover" aria-hidden="true">
+        <img data-part="cover" alt="" hidden>
+        <svg class="cover-icon" viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h8l5 5v13H6z"/><path d="M14 3v5h5"/></svg>
+      </div>
+      <div class="task-main">
+        <h3 class="task-title" data-part="title"></h3>
+        <div class="bar" role="progressbar" aria-label="Conversion progress" aria-valuemin="0" aria-valuemax="100"><span data-part="fill"></span></div>
+        <p class="task-status" data-part="status"></p>
+        <p class="task-note" data-part="note" hidden></p>
+      </div>
+      <div class="task-actions">
+        <button type="button" class="btn btn-primary" data-action="download">Download PDF</button>
+        <button type="button" class="btn" data-action="retry">Convert again</button>
+        <button type="button" class="btn" data-action="cancel">Cancel</button>
+        <button type="button" class="btn btn-ghost" data-action="remove">Remove</button>
+      </div>
+    </li>
+  </template>
+
+  <noscript><p class="noscript">This page needs JavaScript to build PDFs in your browser.</p></noscript>
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>

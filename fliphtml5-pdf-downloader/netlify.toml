@@ -1,0 +1,3 @@
+# Static site: no build step, no functions. Everything in `site/` is published.
+[build]
+  publish = "site"
