@@ -108,9 +108,9 @@ void main() {
   float soft = uFrost * (1.0 - rim);
   vec3 col;
   if (rim > 0.002) {
-    col.r = scene(p + off * 1.18, soft).r;
+    col.r = scene(p + off * 1.25, soft).r;
     col.g = scene(p + off, soft).g;
-    col.b = scene(p + off * 0.82, soft).b;
+    col.b = scene(p + off * 0.75, soft).b;
   } else {
     col = scene(p, soft);
   }
