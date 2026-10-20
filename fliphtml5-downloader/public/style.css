@@ -43,6 +43,10 @@
   --glass-blur: 18px;
   --glass-sat: 190%;
   --lens-light: 1.05;
+  /* clear glass (glass.js): saturation, brightness and rim glow */
+  --lq-sat: 1.3;
+  --lq-bright: 1.03;
+  --lq-glow: 0.12;
   --rim-hi: rgba(255, 255, 255, 0.95);
   --rim-mid: rgba(255, 255, 255, 0.55);
   --rim-lo: rgba(255, 255, 255, 0.16);
@@ -89,6 +93,9 @@
     --glass-blur: 20px;
     --glass-sat: 160%;
     --lens-light: 0.97;
+    --lq-sat: 1.2;
+    --lq-bright: 0.9;
+    --lq-glow: 0.06;
     --rim-hi: rgba(255, 255, 255, 0.62);
     --rim-mid: rgba(255, 255, 255, 0.26);
     --rim-lo: rgba(255, 255, 255, 0.06);
@@ -122,7 +129,12 @@ html {
   -webkit-text-size-adjust: 100%;
 }
 
+/* flow-root stops the nav's top margin from pushing the body (and the
+   background drawn inside it) down, so the glass canvases, which measure
+   from the top of the document, line up with it. */
 body {
+  position: relative;
+  display: flow-root;
   margin: 0;
   min-height: 100vh;
   background: var(--bg);
@@ -201,13 +213,44 @@ svg {
 /* ---------- the glass material ---------- */
 
 .glass {
+  --lq-tint: 0.2;
+  --lq-frost: 3;
   position: relative;
   isolation: isolate;
   background: var(--glass-tint);
   -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-sat));
   backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-sat));
-  box-shadow: var(--glass-inner), var(--glass-drop);
+  box-shadow: var(--glass-drop);
   transition: --light 0.5s ease-out;
+}
+
+/* Clear glass (glass.js): a canvas showing the page background behind the
+   element as seen through glass, under the rim light and gloss. */
+.glass-canvas {
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+.liquid .glass:not(.nav) {
+  background: transparent;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+/* The canvases show the background at fixed spots on the page, so it
+   scrolls with the content instead of staying put. */
+.liquid .backdrop {
+  position: absolute;
+}
+
+.liquid .backdrop::before,
+.liquid .backdrop::after {
+  display: none;
 }
 
 /* Bright rim, strongest on the side facing the light, with a fainter
@@ -236,7 +279,8 @@ svg {
   pointer-events: none;
 }
 
-/* Gloss across the top and light gathering at the bottom edge. */
+/* Gloss across the top, light gathering at the bottom edge, and the inner
+   shading (here rather than on .glass so it sits above the canvas). */
 .glass::after {
   content: "";
   position: absolute;
@@ -246,6 +290,7 @@ svg {
   background:
     linear-gradient(180deg, var(--gloss) 0%, transparent 38%),
     radial-gradient(70% 50% at 50% 115%, var(--glow-bottom), transparent 70%);
+  box-shadow: var(--glass-inner);
   pointer-events: none;
 }
 
@@ -345,6 +390,7 @@ svg {
 
 .speech {
   --glass-tint: var(--speech-tint);
+  --lq-tint: 0.24;
   padding: 12px 20px;
   border-radius: 24px;
 }
@@ -463,7 +509,7 @@ h1 {
 
 .panel {
   --glass-tint: var(--panel-tint);
-  --frost: 10px;
+  --lq-tint: 0.14;
   display: grid;
   grid-template-columns: 1fr auto;
   gap: 12px;
@@ -1047,6 +1093,8 @@ h1 {
 .chips li {
   --glass-tint: var(--chip-tint);
   --glass-blur: 12px;
+  --lq-tint: 0.24;
+  --lq-frost: 2;
   display: inline-flex;
   align-items: center;
   gap: 7px;
@@ -1252,6 +1300,25 @@ h1 {
 
   .section {
     margin-top: 64px;
+  }
+}
+
+/* Dark glass needs a stronger tint to keep text readable. */
+@media (prefers-color-scheme: dark) {
+  .glass {
+    --lq-tint: 0.32;
+  }
+
+  .panel {
+    --lq-tint: 0.26;
+  }
+
+  .speech {
+    --lq-tint: 0.42;
+  }
+
+  .chips li {
+    --lq-tint: 0.3;
   }
 }
 
