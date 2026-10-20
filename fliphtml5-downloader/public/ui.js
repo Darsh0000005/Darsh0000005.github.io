@@ -181,6 +181,29 @@
     });
   }
 
+  // ---------- quality: a glass thumb slides to the chosen option ----------
+
+  const seg = document.getElementById("quality-group");
+  const thumb = seg.querySelector(".seg-thumb");
+  function placeThumb(animate) {
+    const checked = seg.querySelector("input:checked");
+    if (!checked) return;
+    const label = checked.closest("label");
+    thumb.classList.toggle("instant", !animate);
+    thumb.style.width = `${label.offsetWidth}px`;
+    thumb.style.transform = `translateX(${label.offsetLeft}px)`;
+    if (animate) {
+      thumb.classList.remove("jelly");
+      void thumb.offsetWidth; // restart the squash animation
+      thumb.classList.add("jelly");
+    }
+  }
+  seg.addEventListener("change", () => placeThumb(true));
+  thumb.addEventListener("animationend", () => thumb.classList.remove("jelly"));
+  if ("ResizeObserver" in window) new ResizeObserver(() => placeThumb(false)).observe(seg);
+  if (document.fonts) document.fonts.ready.then(() => placeThumb(false));
+  placeThumb(false);
+
   // ---------- little extras ----------
 
   document.addEventListener("orbpoke", () => {

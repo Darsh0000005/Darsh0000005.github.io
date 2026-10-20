@@ -4,12 +4,12 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>FlipHTML5 to PDF</title>
-  <meta name="description" content="Paste a FlipHTML5 link and save the book as a PDF, with optional selectable text (OCR). Free, no sign-up, runs in your browser." />
+  <meta name="description" content="Paste a FlipHTML5 link and save the book as a PDF, with optional selectable text (OCR). Runs in your browser." />
   <meta property="og:title" content="FlipHTML5 to PDF" />
   <meta property="og:description" content="Paste a FlipHTML5 link and save the book as a PDF, with optional selectable text." />
   <meta property="og:type" content="website" />
-  <meta name="theme-color" content="#f5f5fb" media="(prefers-color-scheme: light)" />
-  <meta name="theme-color" content="#08080f" media="(prefers-color-scheme: dark)" />
+  <meta name="theme-color" content="#eef0f7" media="(prefers-color-scheme: light)" />
+  <meta name="theme-color" content="#06060c" media="(prefers-color-scheme: dark)" />
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%237c3aed'/%3E%3Cstop offset='.55' stop-color='%234f46e5'/%3E%3Cstop offset='1' stop-color='%2306b6d4'/%3E%3C/linearGradient%3E%3C/defs%3E%3Ccircle cx='16' cy='16' r='15' fill='url(%23g)'/%3E%3Crect x='10.4' y='10' width='3.4' height='8.5' rx='1.7' fill='white'/%3E%3Crect x='18.2' y='10' width='3.4' height='8.5' rx='1.7' fill='white'/%3E%3C/svg%3E" />
   <link rel="preload" href="fonts/plus-jakarta-sans-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin />
   <link rel="stylesheet" href="style.css" />
@@ -17,7 +17,7 @@
 <body>
   <div class="backdrop" aria-hidden="true"></div>
 
-  <header class="nav">
+  <header class="nav glass" data-lens>
     <a class="brand" href="./">
       <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true">
         <defs>
@@ -42,14 +42,20 @@
   <main class="wrap">
     <section class="hero">
       <div class="buddy">
-        <canvas id="orb" class="orb" width="280" height="280" aria-hidden="true"></canvas>
-        <p id="bubble" class="bubble">Paste a FlipHTML5 link and I'll turn it into a PDF.</p>
+        <canvas id="orb" class="orb" width="310" height="310" aria-hidden="true"></canvas>
+        <div class="speech-wrap">
+          <span class="speech-dot big" aria-hidden="true"></span>
+          <span class="speech-dot small" aria-hidden="true"></span>
+          <div class="speech glass">
+            <p id="bubble" class="bubble">Paste a FlipHTML5 link and I'll turn it into a PDF.</p>
+          </div>
+        </div>
       </div>
       <h1>Turn FlipHTML5 books into <span class="grad-text">PDFs</span></h1>
       <p class="lede">Paste a link and press download. Pages stay sharp, and OCR can make the text selectable.</p>
     </section>
 
-    <form id="form" class="panel" autocomplete="off">
+    <form id="form" class="panel glass" data-lens autocomplete="off">
       <label for="url" class="sr-only">FlipHTML5 link</label>
       <div class="field">
         <svg class="field-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg>
@@ -69,9 +75,12 @@
         <fieldset id="quality-group" class="seg">
           <legend class="sr-only">Quality</legend>
           <span class="opt-label" aria-hidden="true">Quality</span>
-          <label><input type="radio" name="quality" value="best" /><span>Best</span></label>
-          <label><input type="radio" name="quality" value="balanced" checked /><span>Balanced</span></label>
-          <label><input type="radio" name="quality" value="small" /><span>Small</span></label>
+          <span class="seg-track">
+            <span class="seg-thumb" aria-hidden="true"></span>
+            <label><input type="radio" name="quality" value="best" /><span>Best</span></label>
+            <label><input type="radio" name="quality" value="balanced" checked /><span>Balanced</span></label>
+            <label><input type="radio" name="quality" value="small" /><span>Small</span></label>
+          </span>
         </fieldset>
 
         <div class="ocr-row">
@@ -110,26 +119,29 @@
     <section id="tasks" class="tasks" aria-live="polite"></section>
 
     <ul class="chips" aria-label="Highlights">
-      <li><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>Runs in your browser</li>
-      <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg>No sign-up</li>
-      <li><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" /><path d="M2 12h20" /><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" /></svg>OCR in 20 languages</li>
-      <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m16 18 6-6-6-6" /><path d="m8 6-6 6 6 6" /></svg>Free and open source</li>
+      <li class="glass"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>Runs in your browser</li>
+      <li class="glass"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg>No sign-up</li>
+      <li class="glass"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" /><path d="M2 12h20" /><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" /></svg>OCR in 20 languages</li>
+      <li class="glass"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="2" width="14" height="20" rx="2" /><path d="M12 18h.01" /></svg>Works on any device</li>
     </ul>
 
     <section id="how" class="section">
       <h2>How it works</h2>
       <ol class="steps">
-        <li>
+        <li class="glass">
+          <span class="step-num" aria-hidden="true">01</span>
           <span class="step-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg></span>
           <h3>Copy the link</h3>
           <p>Open the book on FlipHTML5 and copy the link from your browser's address bar.</p>
         </li>
-        <li>
+        <li class="glass">
+          <span class="step-num" aria-hidden="true">02</span>
           <span class="step-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 21v-7" /><path d="M4 10V3" /><path d="M12 21v-9" /><path d="M12 8V3" /><path d="M20 21v-5" /><path d="M20 12V3" /><path d="M2 14h4" /><path d="M10 8h4" /><path d="M18 16h4" /></svg></span>
           <h3>Paste and choose</h3>
           <p>Pick a quality. Turn on Selectable text if you want to copy or search the words in your PDF.</p>
         </li>
-        <li>
+        <li class="glass">
+          <span class="step-num" aria-hidden="true">03</span>
           <span class="step-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12" /><path d="m7 10 5 5 5-5" /><path d="M5 21h14" /></svg></span>
           <h3>Get your PDF</h3>
           <p>Keep the tab open while the pages load. The PDF saves to your downloads when every page is done.</p>
@@ -139,32 +151,33 @@
 
     <section id="faq" class="section faq">
       <h2>Questions</h2>
-      <details>
-        <summary>Why can't I select text in my PDF?</summary>
-        <p>FlipHTML5 stores most books as pictures of pages, so there's no text to copy. Turn on Selectable text (OCR) and the site reads the words and adds an invisible text layer over each page. You can then select, copy and search, and the pages look exactly the same.</p>
-      </details>
-      <details>
-        <summary>How accurate is the text?</summary>
-        <p>Very good on clean printed pages. It can get the odd letter wrong, and it may miss stylised headings or text inside photos.</p>
-      </details>
-      <details>
-        <summary>Why did my book fail?</summary>
-        <p>Books the publisher marked as private or encrypted can't be downloaded. Check that the link opens the book on FlipHTML5, then try again.</p>
-      </details>
-      <details>
-        <summary>Do I need to upload anything?</summary>
-        <p>No. There's no account and no upload. Your PDF is put together in your browser, and OCR runs on your device.</p>
-      </details>
+      <div class="faq-list glass">
+        <details>
+          <summary>Why can't I select text in my PDF?</summary>
+          <p>FlipHTML5 stores most books as pictures of pages, so there's no text to copy. Turn on Selectable text (OCR) and the site reads the words and adds an invisible text layer over each page. You can then select, copy and search, and the pages look exactly the same.</p>
+        </details>
+        <details>
+          <summary>How accurate is the text?</summary>
+          <p>Very good on clean printed pages. It can get the odd letter wrong, and it may miss stylised headings or text inside photos.</p>
+        </details>
+        <details>
+          <summary>Why did my book fail?</summary>
+          <p>Books the publisher marked as private or encrypted can't be downloaded. Check that the link opens the book on FlipHTML5, then try again.</p>
+        </details>
+        <details>
+          <summary>Do I need to upload anything?</summary>
+          <p>No. There's no account and no upload. Your PDF is put together in your browser, and OCR runs on your device.</p>
+        </details>
+      </div>
     </section>
 
     <footer class="foot">
-      <p>Only download books you have the right to keep, such as your own publications or ones the publisher allows you to download.</p>
-      <p>Based on the MIT-licensed <a href="https://github.com/nyr-github/fliphtml5-downloader" rel="noopener">fliphtml5-downloader</a> by nyr-github. Not affiliated with FlipHTML5.</p>
+      <p>Only download books you have the right to keep, such as your own publications or ones the publisher allows you to download. Not affiliated with FlipHTML5.</p>
     </footer>
   </main>
 
   <template id="task-tpl">
-    <article class="task">
+    <article class="task glass">
       <div class="cover-wrap">
         <img class="cover" alt="" hidden />
         <div class="ph" aria-hidden="true">
@@ -189,5 +202,6 @@
   <script src="orb.js"></script>
   <script src="app.js"></script>
   <script src="ui.js"></script>
+  <script src="glass.js"></script>
 </body>
 </html>
