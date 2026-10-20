@@ -117,13 +117,15 @@
   }
 
   // Newer books ship the page list encrypted; FlipHTML5's own WASM decoder
-  // (deString.js) turns it back into JSON.
+  // (deString.js) turns it back into JSON. Its functions exist before the
+  // WASM has loaded, so wait for the runtime itself to be ready.
   async function decryptPages(encrypted) {
     for (const src of DESTRING_DEPS) await loadScript(src);
-    await waitFor(
-      () => window.allocateUTF8 && window.UTF8ToString && window.Module && window.Module._DeString,
-      15000,
-    );
+    await waitFor(() => {
+      const M = window.Module;
+      const ready = M && (M.isReady || M.calledRun || window.runtimeInitialized === true);
+      return ready && M._DeString && window.allocateUTF8 && window.UTF8ToString;
+    }, 20000);
     let out = window.UTF8ToString(window.Module._DeString(window.allocateUTF8(encrypted)));
     const end = out.lastIndexOf("]");
     if (end > 0) out = out.slice(0, end + 1);
